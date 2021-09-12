@@ -1,10 +1,13 @@
 @echo off
-title Extract v4(2021.04.13) - автоматический сборщик стенда АЦК-Финансы
+REM Защита от настройки кодировки в cmd
+chcp 866
+title Extract v4.X(2021.08.30) - автоматический сборщик стенда АЦК-Финансы
+REM author: albafoxx (abzaev.albert@gmail.com)
 
 REM ОПРЕДЕЛЯЕМ СТАНДАРТНЫЕ ПЕРЕМЕННЫЕ/ПУТИ
-@echo.
 Set "SYS=АЦК-Финансы"
 Set "ini=_extract_fin.ini"
+
 Set "SP_PORT=2001"
 Set "RMI_PORT=2099"
 Set "infile_1=StartServer.bat"
@@ -30,6 +33,7 @@ set answer2=0
 
 REM ВЫТАСКИВАЕМ ПЕРЕМЕННЫЕ/ПУТИ ИЗ ФАЙЛА НАСТРОЕК
 SetLocal EnableDelayedExpansion
+
 set /a c=0
 for /f "UseBackQ Delims=" %%A IN (%ini%) do (
   set /a c+=1
@@ -52,45 +56,45 @@ for /f "UseBackQ Delims=" %%A IN (%ini%) do (
 
 REM ИНФОРМАТИВНЫЙ БЛОК ДЛЯ ВЫВОДА В КОНСОЛЬ
 echo Директории:
-echo берем эталонку из %in:~37%
+echo берем эталонку из %in%
 echo собираем здесь    %out%
 echo -----------------------------------------------------------------------
-echo ЕИС      %EIS:~37%
-echo Отчеты   %REPORT:~37%
-echo СОФИТ    %SOFIT:~37%
-echo ТОМКАТ   %tomcat:~43%
-echo DelphiXE %DelphiXE:~43%
+echo ЕИС      %EIS%
+echo Отчеты   %REPORT%
+echo СОФИТ    %SOFIT%
+echo ТОМКАТ   %tomcat%
+echo DelphiXE %DelphiXE%
 echo -----------------------------------------------------------------------
+echo.
 
 REM ========== 1.БЛОК С ПРОВЕРКАМИ (начало) ==========
 REM 1.1.ПРОВЕРКА ОСНОВНЫХ ДИРЕКТОРИЙ
 :check_dir
 set check_stop=0
 If Exist "%in%" ( echo + Директория "%in:~37%" найдена.
-) else ( echo - Директория "%in:~37%" не найдена.
-set check_stop=1)
+) else (echo - Директория "%in:~37%" не найдена.
+		set check_stop=1)
 If Exist "%EIS%" ( echo + Директория "%EIS:~37%" найдена.
-) else ( echo - Директория "%EIS:~37%" не найдена.
-set check_stop=1)
+) else (echo - Директория "%EIS:~37%" не найдена.
+		set check_stop=1)
 If Exist "%REPORT%" ( echo + Директория "%REPORT:~37%" найдена.
-) else ( echo - Директория "%REPORT:~37%" не найдена.
-set check_stop=1)
+) else (echo - Директория "%REPORT:~37%" не найдена.
+		set check_stop=1)
 If Exist "%SOFIT%" ( echo + Директория "%SOFIT:~37%" найдена.
-) else ( echo - Директория "%SOFIT:~37%" не найдена.
-set check_stop=1)
+) else (echo - Директория "%SOFIT:~37%" не найдена.
+		set check_stop=1)
 If Exist "%tomcat%" ( echo + Директория "%tomcat:~43%" найдена.
-) else ( echo - Директория "%tomcat:~43%" не найдена.
-set check_stop=1)
+) else (echo - Директория "%tomcat:~43%" не найдена.
+		set check_stop=1)
 If Exist "%DelphiXE%" ( echo + Директория "%DelphiXE:~43%" найдена.
-) else ( echo - Директория "%DelphiXE:~43%" не найдена. 
-set check_stop=1)
-
+) else (echo - Директория "%DelphiXE:~43%" не найдена. 
+		set check_stop=1)
 REM ЕСЛИ ХОТЬ ОДИН ПУТЬ УКАЗАН НЕКОРРЕКТНО - ОСТАНАВЛИВАЕМ СБОРКУ. ВЫДАЕМ СООБЩЕНИЕ.
 echo.
-If %check_stop%==0 ( echo Все указанные директории найдены. Продолжаем сборку стенда %SYS%
+If %check_stop%==0 (echo Все указанные директории найдены. Продолжаем сборку стенда %SYS%
 goto :check_out
-) else ( echo Некорретно указаны директории, необходимо проверить пути в ini-файле [подробности выше]. Сборка стенда %SYS% остановлена. 
-pause 
+) else (echo Некорретно указаны директории, необходимо проверить пути в ini-файле [подробности выше]. Сборка стенда %SYS% остановлена.
+pause
 goto :exit_bat)
 
 REM 1.2.ПРОВЕРКА НАЛИЧИЯ ДИРЕКТОРИИ, В КОТОРОЙ БУДЕТ СОБИРАТЬСЯ СБОРКА
@@ -107,24 +111,21 @@ goto :extract
 REM 1.3.ПРОВЕРКА НА ПЕРЕЗАПИСЬ ФАЙЛОВ В ПАПКЕ %OUT%, ЕСЛИ ОНА УЖЕ ЕСТЬ (СОЗДАНА)
 :ask
 set /p ask="Подтвердите перезапись файлов в директории "%out%"? [y/n]: "
-If %ask%==y (
-RD /S /Q %out%
-goto :extract
-) else (
-If %ask%==n (
-echo Сборка стенда %SYS% остановлена.
-goto :exit_bat
-) else (
-echo Команда не распознана. Попробуйте ещё раз.
-echo.
-goto :ask))
+If %ask%==y (RD /S /Q %out%
+			goto :extract
+) else (If %ask%==n (
+		echo Сборка стенда %SYS% остановлена.
+		goto :exit_bat
+		) else (echo Команда не распознана. Попробуйте ещё раз.
+				echo.
+				goto :ask))
 
 REM 1.4.ВОПРОС НА ПРОДОЛЖЕНИЕ СБОРКИ СТЕНДА, ЕСЛИ ВОЗНИКНЕТ ОШИБКА НА ОПРЕДЕЛЕННОМ ЭТАПЕ
 :askexit
 set /p ask=%question%
 If %ask%==y (
 	goto %answer%
-	) else ( 
+	) else (
 		If %ask%==n (
 			If %answer2%==ask_start (
 				goto :ask_start
@@ -137,19 +138,12 @@ If %ask%==y (
 REM ========== 1.БЛОК С ПРОВЕРКАМИ (конец) ==========
 
 REM ========== 2.ОБЩИЕ КОМАНДЫ (начало) ==========
-REM 2.1 ОБЩИЙ ПОРЯДОК КОМАНД ПРИ РАСПАКОВКЕ АРХИВОВ (начало)
-REM Для инфо - https://informationworker.ru/winrar.ru/
 
+REM 2.1 ОБЩИЙ ПОРЯДОК КОМАНД ПРИ РАСПАКОВКЕ АРХИВОВ (начало)
 :unzip_data
 echo %textblock%
+If 
 %winRar% x "%zipFile%" -o "%outputFile%" -r -y -ibck
-
-REM If %errorlevel%==2 (Echo "- - - Произошла критическая ошибка. - - -") 
-REM If %errorlevel%==3 (Echo "- - - Неверная контрольная сумма CRC32. Данные повреждены. - - -") 
-REM If %errorlevel%==6 (Echo "- - - Произошла ошибка открытия файла. - - -")
-REM If %errorlevel%==7 (Echo "- - - Ошибка при указании параметра в командной строке. - - -")
-REM If %errorlevel%==255 (Echo "- - - Операция была прервана пользователем. - - -") 
-
 If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
 					goto :%nextPoint%) else (Echo "- - - Возникли проблемы при выполнении. - - -" 
 										 set answer=%nextPoint%
@@ -170,15 +164,19 @@ REM 2.3.ОБЩИЙ ПОРЯДОК КОМАНД ПРИ ЗАМЕНЕ ДАННЫХ (начало)
 :rename_data
 REM Определяем переменные
 setlocal enabledelayedexpansion
-echo %textblock% %fileName%
+REM Предварительно удаляем строки с пустыми значениями (фикс от записи текста "Режим вывода команд на экран (ECHO) отключен.")
 cd /d "%fileDirectory%"
+findstr /vrc:"^$" /vrc:"^ $" /vrc:"^  $" %FILENAME%>tmp0.tmp
+set "tempFile=tmp0.tmp"																																																							 
+echo %textblock% %fileName%
 set COUNT=0
-for /F "tokens=* delims=," %%n in (!fileName!) do (
+for /F "tokens=* delims=," %%n in (!tempFile!) do (
 set LINE=%%n
 set TMPR=!LINE:%oldText%=%newText%!
-Echo !TMPR!>>tmp
+Echo !TMPR!>>tmp1.tmp
 )
-move tmp %fileName%
+move tmp1.tmp %fileName%
+del %tempFile%
 If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
 					goto :%nextPoint%) else (Echo "- - - Возникли проблемы при выполнении. - - -" 
 										set answer=%nextPoint%
@@ -208,11 +206,9 @@ REM 3.2.РАСПАКОВЫВАЕМ АРХИВ CLIENT.ZIP
 	set "nextPoint=extract_delphi"
 echo Проверяем наличие директории client ...
 If not exist "%out%"\client (
-echo Директория client не обнаружена. Создаем директорию client...
-MD "%out%"\client
-goto :unzip_data
-) else (
-goto :unzip_data)
+		echo Директория client не обнаружена. Создаем директорию client...
+		MD "%out%"\client
+		goto :unzip_data) else (goto :unzip_data)
 
 :extract_delphi
 REM 3.3.ДОБАВЛЯЕМ DELPHI-КОМПОНЕНТЫ В директорию CLIENT
@@ -233,6 +229,7 @@ goto :copy_data
 :extract_report
 REM 3.5.РАСПАКОВЫВАЕМ АРХИВ ОТЧЕТЫ
 	set "textBlock=Распаковываем архив ОТЧЕТЫ ..."
+	set "inputFolder=%REPORT%"
 	set "zipFile=%REPORT%\*.zip"
 	set "outputFile=%out%\"
 	set "nextPoint=extract_sofit"
@@ -241,6 +238,7 @@ goto :unzip_data
 :extract_sofit
 REM 3.6.РАСПАКОВЫВАЕМ АРХИВ СОФИТ
 	set "textBlock=Распаковываем архив СОФИТ ..."
+	set "inputFolder=%SOFIT%"
 	set "zipFile=%SOFIT%\*.zip"
 	set "outputFile=%out%\"
 	set "nextPoint=extract_shplan"
@@ -396,7 +394,7 @@ If exist %infile_5% (
 	goto :rename_data
 ) else (
 	echo Файл настроек не найден.
-		set question="Повторить поиск файла %infile_5%? [y/n]: " 
+		set question="Повторить поиск файла %infile_5%? [y/n]: "
 		set answer=web_rmi
 	goto :askexit)
 
@@ -411,7 +409,7 @@ goto :askexit
 
 :drop_war
 cd /d "%out%"\apache_tomcat\bin\
-call shutdown.bat 
+call shutdown.bat
 TIMEOUT /T 5 /NOBREAK
 cd /d "%out%"\apache_tomcat\webapps
 DEL /Q azk.war
