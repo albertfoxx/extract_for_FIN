@@ -1,13 +1,14 @@
 @echo off
-REM Защита от настройки кодировки в cmd
+
+REM Проставляем кодировку. Может быть, что при запуске программы будут ошибки, связанные с невозможностью определить пути
 chcp 866
+REM Название программы. Версия и дата релиза
 title Extract v4.X(2021.08.30) - автоматический сборщик стенда АЦК-Финансы
 REM author: albafoxx (abzaev.albert@gmail.com)
 
 REM ОПРЕДЕЛЯЕМ СТАНДАРТНЫЕ ПЕРЕМЕННЫЕ/ПУТИ
 Set "SYS=АЦК-Финансы"
 Set "ini=_extract_fin.ini"
-
 Set "SP_PORT=2001"
 Set "RMI_PORT=2099"
 Set "infile_1=StartServer.bat"
@@ -16,12 +17,11 @@ Set "infile_3=Azk2Clnt.ini"
 Set "infile_4=Azk2Server.properties"
 Set "infile_5=web.properties"
 Set "infile_6=start.bat"
-
 Set "fb_old=3050:D:/_DBase/balagan/R_MK.FDB"
 Set "ora_old=F_IRKOBL_190327"
-
 Set "Jram_old=1024m"
 
+REM Прописываем xml-файлы, в которых меняем "action"
 Set "operkind=operkind.xml"
 Set "unidoctype=unidoctype.xml"
 Set "serverprocessor=serverprocessor.xml"
@@ -33,7 +33,6 @@ set answer2=0
 
 REM ВЫТАСКИВАЕМ ПЕРЕМЕННЫЕ/ПУТИ ИЗ ФАЙЛА НАСТРОЕК
 SetLocal EnableDelayedExpansion
-
 set /a c=0
 for /f "UseBackQ Delims=" %%A IN (%ini%) do (
   set /a c+=1
@@ -89,11 +88,11 @@ If Exist "%tomcat%" ( echo + Директория "%tomcat:~43%" найдена.
 If Exist "%DelphiXE%" ( echo + Директория "%DelphiXE:~43%" найдена.
 ) else (echo - Директория "%DelphiXE:~43%" не найдена. 
 		set check_stop=1)
-REM ЕСЛИ ХОТЬ ОДИН ПУТЬ УКАЗАН НЕКОРРЕКТНО - ОСТАНАВЛИВАЕМ СБОРКУ. ВЫДАЕМ СООБЩЕНИЕ.
 echo.
-If %check_stop%==0 (echo Все указанные директории найдены. Продолжаем сборку стенда %SYS%
-goto :check_out
-) else (echo Некорретно указаны директории, необходимо проверить пути в ini-файле [подробности выше]. Сборка стенда %SYS% остановлена.
+REM ЕСЛИ ХОТЬ ОДИН ПУТЬ УКАЗАН НЕКОРРЕКТНО - ОСТАНАВЛИВАЕМ СБОРКУ. ВЫДАЕМ СООБЩЕНИЕ.
+If %check_stop%==0 (echo Все указанные директории найдены. Продолжаем сборку стенда %SYS% 
+	goto :check_out
+	) else (echo Некорретно указаны директории, необходимо проверить пути в ini-файле [подробности выше]. Сборка стенда %SYS% остановлена.
 pause
 goto :exit_bat)
 
@@ -138,11 +137,9 @@ If %ask%==y (
 REM ========== 1.БЛОК С ПРОВЕРКАМИ (конец) ==========
 
 REM ========== 2.ОБЩИЕ КОМАНДЫ (начало) ==========
-
 REM 2.1 ОБЩИЙ ПОРЯДОК КОМАНД ПРИ РАСПАКОВКЕ АРХИВОВ (начало)
 :unzip_data
 echo %textblock%
-If 
 %winRar% x "%zipFile%" -o "%outputFile%" -r -y -ibck
 If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
 					goto :%nextPoint%) else (Echo "- - - Возникли проблемы при выполнении. - - -" 
@@ -162,7 +159,6 @@ echo -----------------------------------------------------------------------
 
 REM 2.3.ОБЩИЙ ПОРЯДОК КОМАНД ПРИ ЗАМЕНЕ ДАННЫХ (начало)
 :rename_data
-REM Определяем переменные
 setlocal enabledelayedexpansion
 REM Предварительно удаляем строки с пустыми значениями (фикс от записи текста "Режим вывода команд на экран (ECHO) отключен.")
 cd /d "%fileDirectory%"
@@ -184,7 +180,7 @@ If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
 echo -----------------------------------------------------------------------
 REM ========== 2.ОБЩИЕ КОМАНДЫ (конец) ==========
 
-REM ========== 3.СБОРКА СТЕНДА (начало) ==========
+REM ========== 3.СБОРКА СТЕНДА (начало) =========
 :extract
 REM 3.1.РАСПАКОВЫВАЕМ АРХИВ SERVER.ZIP
 If not exist "%winRar%" (
@@ -230,7 +226,12 @@ goto :copy_data
 REM 3.5.РАСПАКОВЫВАЕМ АРХИВ ОТЧЕТЫ
 	set "textBlock=Распаковываем архив ОТЧЕТЫ ..."
 	set "inputFolder=%REPORT%"
-	set "zipFile=%REPORT%\*.zip"
+	REM Делаем проверку директории/архива
+	if exist %SOFIT%\ (
+		set "zipFile=%REPORT%\*.zip"
+	) else (
+		set zipFile=%REPORT%
+	)
 	set "outputFile=%out%\"
 	set "nextPoint=extract_sofit"
 goto :unzip_data
@@ -239,14 +240,19 @@ goto :unzip_data
 REM 3.6.РАСПАКОВЫВАЕМ АРХИВ СОФИТ
 	set "textBlock=Распаковываем архив СОФИТ ..."
 	set "inputFolder=%SOFIT%"
-	set "zipFile=%SOFIT%\*.zip"
+	REM Делаем проверку директории/архива
+	if exist %SOFIT%\ (
+		set "zipFile=%SOFIT%\*.zip"
+	) else (
+		set zipFile=%SOFIT%
+	)
 	set "outputFile=%out%\"
 	set "nextPoint=extract_shplan"
 goto :unzip_data
 
 :extract_shplan
 REM 3.7.ДОБАВЛЯЕМ ФАЙЛЫ SCHPLANSTOP
-	set "textBlock=обавляем файлы schplanstop..."
+	set "textBlock=Добавляем файлы schplanstop..."
 	set "inputFolder=%schplanstop%"
 	set "outputFolder=%out%\SQL"
 	set "nextPoint=extract_azkabat"
@@ -254,7 +260,7 @@ goto :copy_data
 
 :extract_azkabat
 REM 3.8.ДОБАВЛЯЕМ ФАЙЛЫ AZKA.BAT
-	set "textBlock=обавляем файлы azka.bat ..."
+	set "textBlock=Добавляем файлы azka.bat ..."
 	set "inputFolder=%azka%"
 	set "outputFolder=%out%"
 	set "nextPoint=extract_port"
@@ -430,7 +436,7 @@ REM Запуск СП АЦК
 cd /d "%out%"
 call StartServer.bat
 
-REM Делаем остановку перед выходом
+REM Делаем остановку перед выходом. После чего выходим из программы
 pause
 :exit_bat
 exit
