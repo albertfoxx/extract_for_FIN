@@ -1,10 +1,11 @@
 @echo off
-
-REM Проставляем кодировку. Может быть, что при запуске программы будут ошибки, связанные с невозможностью определить пути
-chcp 866
 REM Название программы. Версия и дата релиза
-title Extract v4.X(2021.08.30) - автоматический сборщик стенда АЦК-Финансы
-REM author: albafoxx (abzaev.albert@gmail.com)
+title Extract v4.0(2021.10.11) - автоматический сборщик стенда АЦК-Финансы
+REM author : albafoxx (abzaev.albert@gmail.com)
+
+REM Указываем кодировку. Необходимо для компьютерах, где по-умолчанию используется другая кодировка
+chcp 866
+echo.
 
 REM ОПРЕДЕЛЯЕМ СТАНДАРТНЫЕ ПЕРЕМЕННЫЕ/ПУТИ
 Set "SYS=АЦК-Финансы"
@@ -70,23 +71,23 @@ REM ========== 1.БЛОК С ПРОВЕРКАМИ (начало) ==========
 REM 1.1.ПРОВЕРКА ОСНОВНЫХ ДИРЕКТОРИЙ
 :check_dir
 set check_stop=0
-If Exist "%in%" ( echo + Директория "%in:~37%" найдена.
-) else (echo - Директория "%in:~37%" не найдена.
+If Exist "%in%" ( echo + Директория "%in%" найдена.
+) else (echo - Директория "%in%" не найдена.
 		set check_stop=1)
-If Exist "%EIS%" ( echo + Директория "%EIS:~37%" найдена.
-) else (echo - Директория "%EIS:~37%" не найдена.
+If Exist "%EIS%" ( echo + Директория "%EIS%" найдена.
+) else (echo - Директория "%EIS%" не найдена.
 		set check_stop=1)
-If Exist "%REPORT%" ( echo + Директория "%REPORT:~37%" найдена.
-) else (echo - Директория "%REPORT:~37%" не найдена.
+If Exist "%REPORT%" ( echo + Директория "%REPORT%" найдена.
+) else (echo - Директория "%REPORT%" не найдена.
 		set check_stop=1)
-If Exist "%SOFIT%" ( echo + Директория "%SOFIT:~37%" найдена.
-) else (echo - Директория "%SOFIT:~37%" не найдена.
+If Exist "%SOFIT%" ( echo + Директория "%SOFIT%" найдена.
+) else (echo - Директория "%SOFIT%" не найдена.
 		set check_stop=1)
-If Exist "%tomcat%" ( echo + Директория "%tomcat:~43%" найдена.
-) else (echo - Директория "%tomcat:~43%" не найдена.
+If Exist "%tomcat%" ( echo + Директория "%tomcat%" найдена.
+) else (echo - Директория "%tomcat%" не найдена.
 		set check_stop=1)
-If Exist "%DelphiXE%" ( echo + Директория "%DelphiXE:~43%" найдена.
-) else (echo - Директория "%DelphiXE:~43%" не найдена. 
+If Exist "%DelphiXE%" ( echo + Директория "%DelphiXE%" найдена.
+) else (echo - Директория "%DelphiXE%" не найдена. 
 		set check_stop=1)
 echo.
 REM ЕСЛИ ХОТЬ ОДИН ПУТЬ УКАЗАН НЕКОРРЕКТНО - ОСТАНАВЛИВАЕМ СБОРКУ. ВЫДАЕМ СООБЩЕНИЕ.
@@ -163,7 +164,8 @@ setlocal enabledelayedexpansion
 REM Предварительно удаляем строки с пустыми значениями (фикс от записи текста "Режим вывода команд на экран (ECHO) отключен.")
 cd /d "%fileDirectory%"
 findstr /vrc:"^$" /vrc:"^ $" /vrc:"^  $" %FILENAME%>tmp0.tmp
-set "tempFile=tmp0.tmp"																																																							 
+set "tempFile=tmp0.tmp"
+
 echo %textblock% %fileName%
 set COUNT=0
 for /F "tokens=* delims=," %%n in (!tempFile!) do (
@@ -172,7 +174,7 @@ set TMPR=!LINE:%oldText%=%newText%!
 Echo !TMPR!>>tmp1.tmp
 )
 move tmp1.tmp %fileName%
-del %tempFile%
+REM del %tempFile%
 If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
 					goto :%nextPoint%) else (Echo "- - - Возникли проблемы при выполнении. - - -" 
 										set answer=%nextPoint%
@@ -341,12 +343,12 @@ goto :rename_data
 
 :extract_xm3
 REM 3.12.2.МЕНЯЕМ ACTION="PERFORM" НА ACTION="SYNCHRONIZE"
-	REM set "fileName=%serverprocessor%"
-	REM set "fileDirectory=%out%\XML"
-	REM set "oldText=perform"
-	REM set "newText=synchronize"
-	REM set "nextPoint=extract_Xmx"
-REM goto :rename_data
+	set "fileName=%serverprocessor%"
+	set "fileDirectory=%out%\XML"
+	set "oldText=perform"
+	set "newText=synchronize"
+	set "nextPoint=extract_Xmx"
+goto :rename_data
 
 :extract_Xmx
 REM 3.13.МЕНЯЕМ РАЗМЕР ВЫДЕЛЕНОЙ ПАМЯТИ ДЛЯ JAVA
