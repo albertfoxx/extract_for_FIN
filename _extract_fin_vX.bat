@@ -1,6 +1,6 @@
 @echo off
 REM Название программы. Версия и дата релиза
-title Extract v4.0(2021.10.11) - автоматический сборщик стенда АЦК-Финансы
+title Extract v4.2.*(2022.05.22) - автоматический сборщик стенда АЦК-Финансы
 REM author : albafoxx (abzaev.albert@gmail.com)
 
 REM Указываем кодировку. Необходимо для компьютерах, где по-умолчанию используется другая кодировка
@@ -10,30 +10,35 @@ echo.
 REM ОПРЕДЕЛЯЕМ СТАНДАРТНЫЕ ПЕРЕМЕННЫЕ/ПУТИ
 Set "SYS=АЦК-Финансы"
 Set "ini=_extract_fin.ini"
-Set "SP_PORT=2001"
-Set "RMI_PORT=2099"
+
 Set "infile_1=StartServer.bat"
 Set "infile_2=xml.properties"
 Set "infile_3=Azk2Clnt.ini"
 Set "infile_4=Azk2Server.properties"
 Set "infile_5=web.properties"
 Set "infile_6=start.bat"
+Set "infile_7=server.xml"
+
+Set "SP_PORT=2001"
+Set "RMI_PORT=2099"
 Set "fb_old=3050:D:/_DBase/balagan/R_MK.FDB"
 Set "ora_old=F_IRKOBL_190327"
 Set "Jram_old=1024m"
+Set "Server_old=8005"
+Set "Connector_old=8080"
 
 REM Прописываем xml-файлы, в которых меняем "action"
 Set "operkind=operkind.xml"
 Set "unidoctype=unidoctype.xml"
 Set "serverprocessor=serverprocessor.xml"
 
-REM Выносим в начало bat, так как в 4 пункте проверки вопрос будет меняться
+REM Выносим в начало скрипта, так как в 4 пункте проверки вопрос будет меняться
 set question="Продолжить выполнение? [y/n]: "
 REM Задаем значение "по-умолчанию"
 set answer2=0
 
 REM ВЫТАСКИВАЕМ ПЕРЕМЕННЫЕ/ПУТИ ИЗ ФАЙЛА НАСТРОЕК
-SetLocal EnableDelayedExpansion
+SetLocal ENABLEDELAYEDEXPANSION
 set /a c=0
 for /f "UseBackQ Delims=" %%A IN (%ini%) do (
   set /a c+=1
@@ -52,9 +57,12 @@ for /f "UseBackQ Delims=" %%A IN (%ini%) do (
   If !c!==13 set "fbNew=%%A"		rem 13. Путь до БД Firebird
   If !c!==14 set "oraNew=%%A"		rem 14. Путь до БД Oracle
   If !c!==15 set "javaNew=%%A"		rem 15. Размер Java-памяти
+  If !c!==16 set "ServerNew=%%A"		rem 16. Порт на котором запускается веб-сервер
+  If !c!==17 set "ConnectorNew=%%A"		rem 17. Порт по которому будет открываться приложение
 )
 
 REM ИНФОРМАТИВНЫЙ БЛОК ДЛЯ ВЫВОДА В КОНСОЛЬ
+SetLocal DISABLEDELAYEDEXPANSION
 echo Директории:
 echo берем эталонку из %in%
 echo собираем здесь    %out%
@@ -71,6 +79,7 @@ REM ========== 1.БЛОК С ПРОВЕРКАМИ (начало) ==========
 REM 1.1.ПРОВЕРКА ОСНОВНЫХ ДИРЕКТОРИЙ
 :check_dir
 set check_stop=0
+echo Результат проверки указанных значений:
 If Exist "%in%" ( echo + Директория "%in%" найдена.
 ) else (echo - Директория "%in%" не найдена.
 		set check_stop=1)
@@ -89,6 +98,7 @@ If Exist "%tomcat%" ( echo + Директория "%tomcat%" найдена.
 If Exist "%DelphiXE%" ( echo + Директория "%DelphiXE%" найдена.
 ) else (echo - Директория "%DelphiXE%" не найдена. 
 		set check_stop=1)
+SetLocal ENABLEDELAYEDEXPANSION
 echo.
 REM ЕСЛИ ХОТЬ ОДИН ПУТЬ УКАЗАН НЕКОРРЕКТНО - ОСТАНАВЛИВАЕМ СБОРКУ. ВЫДАЕМ СООБЩЕНИЕ.
 If %check_stop%==0 (echo Все указанные директории найдены. Продолжаем сборку стенда %SYS% 
@@ -229,7 +239,7 @@ REM 3.5.РАСПАКОВЫВАЕМ АРХИВ ОТЧЕТЫ
 	set "textBlock=Распаковываем архив ОТЧЕТЫ ..."
 	set "inputFolder=%REPORT%"
 	REM Делаем проверку директории/архива
-	if exist %SOFIT%\ (
+	if exist "%REPORT%\*.*" (
 		set "zipFile=%REPORT%\*.zip"
 	) else (
 		set zipFile=%REPORT%
@@ -243,7 +253,7 @@ REM 3.6.РАСПАКОВЫВАЕМ АРХИВ СОФИТ
 	set "textBlock=Распаковываем архив СОФИТ ..."
 	set "inputFolder=%SOFIT%"
 	REM Делаем проверку директории/архива
-	if exist %SOFIT%\ (
+	if exist "%SOFIT%\*.*" (
 		set "zipFile=%SOFIT%\*.zip"
 	) else (
 		set zipFile=%SOFIT%
@@ -304,7 +314,7 @@ goto :rename_data
 
 :extract_db
 REM 3.10.МЕНЯЕМ ПУТЬ ДО БД FIREBIRD В AZK2SERVER.PROPERTIES
-	set "textBlock=Меняем путь до БД Firebird в"
+	set "textBlock=Меняем путь до БД Firebird в "
 	set "fileName=%infile_4%"
 	set "fileDirectory=%out%"
 	set "oldText=%fb_old%"
@@ -314,7 +324,7 @@ goto :rename_data
 
 :extract_db2
 REM 3.11.МЕНЯЕМ ПУТЬ ДО БД ORACLE В AZK2SERVER.PROPERTIES
-	set "textBlock=Меняем путь до БД Oracle в"
+	set "textBlock=Меняем путь до БД Oracle в "
 	set "fileName=%infile_4%"
 	set "fileDirectory=%out%"
 	set "oldText=%ora_old%"
@@ -367,8 +377,27 @@ xcopy "%tomcat%" "%out%"\apache_tomcat /i /e /h /y
 echo Копируем файл azk.war
 xcopy "%in%"\azk.war "%out%"\apache_tomcat\webapps /i /e /h /y
 If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -") else (Echo "- - - Возникли проблемы при выполнении. - - -" 
-																	set answer=startweb
+																	set answer=extract_tomcat_port
 																	goto :askexit)
+
+:extract_tomcat_port
+REM 3.14.1.МЕНЯЕМ ПОРТ ВЕБ-СЕРВЕРА
+	set "textBlock=Переименовываем порты в "
+	set "fileName=%infile_7%"
+	set "fileDirectory=%out%\apache_tomcat\conf"
+	set "oldText=%Server_old%"
+	set "newText=%ServerNew%"
+	set "nextPoint=extract_tomcat_port2"
+goto :rename_data
+
+:extract_tomcat_port2
+REM 3.14.2.МЕНЯЕМ ПОРТ ДЛЯ ДОСТУПА ВЕБ-ПРИЛОЖЕНИЯ
+	set "fileName=%infile_7%"
+	set "fileDirectory=%out%\apache_tomcat\conf"
+	set "oldText=%Connector_old%"
+	set "newText=%ConnectorNew%"
+	set "nextPoint=startweb"
+goto :rename_data
 
 :startweb
 REM 3.15.ЗАПУСКАЕМ ТОМКАТ ДЛЯ РАСПАКОВКИ azk.war
@@ -439,8 +468,9 @@ cd /d "%out%"
 call StartServer.bat
 
 REM Делаем остановку перед выходом. После чего выходим из программы
+:exit_bat	 
 pause
-:exit_bat
+
 exit
 
 END
