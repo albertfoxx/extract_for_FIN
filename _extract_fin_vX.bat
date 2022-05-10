@@ -27,15 +27,33 @@ Set "Jram_old=1024m"
 Set "Server_old=8005"
 Set "Connector_old=8080"
 
-REM Прописываем xml-файлы, в которых меняем "action"
+REM Раскладываем дату на составные (день, месяц, год):
+set daDD=%DATE:~0,2%
+set daMM=%DATE:~3,2%
+set daYY=%DATE:~-2%
+REM В переменной времени заменяем пробел (который ставиться для числа часов с одним знаком) нулём:
+set datime=%time: =0%
+REM Раскладываем время на составные (часы, минуты, секунды):
+set daho=%datime:~0,2%
+set dami=%datime:~3,2%
+set dass=%datime:~6,2%
+REM Складываем разложенные составные в необходимой форме:
+set daDATE="%daDD%/%daMM%/%daYY% %daho%:%dami%:%dass%"
+
+REM ========== ПРОПИСЫВАЕМ XML-ФАЙЛЫ, В КОТОРЫХ МЕНЯЕМ "ACTION" ==========
+REM Нужно будет перенести их в просто список ini файла и сделать универсальным код
 Set "operkind=operkind.xml"
 Set "unidoctype=unidoctype.xml"
 Set "serverprocessor=serverprocessor.xml"
+Set "reportprocessor=reportprocessor.xml"
 
 REM Выносим в начало скрипта, так как в 4 пункте проверки вопрос будет меняться
 set question="Продолжить выполнение? [y/n]: "
 REM Задаем значение "по-умолчанию"
 set answer2=0
+
+REM Задаем значение "по-умолчанию" для проверки успешности завершения сборки и записи в лог
+set success=0
 
 REM ВЫТАСКИВАЕМ ПЕРЕМЕННЫЕ/ПУТИ ИЗ ФАЙЛА НАСТРОЕК
 SetLocal ENABLEDELAYEDEXPANSION
@@ -75,37 +93,67 @@ echo DelphiXE %DelphiXE%
 echo -----------------------------------------------------------------------
 echo.
 
+@echo Время сборки: %daDATE%>extract_build.log
+@echo Собираем сборку в %out%>>extract_build.log
+@echo.>>extract_build.log
+@echo Берем эталонку из %in%>>extract_build.log
+@echo Используется ЕИС %EIS%>>extract_build.log
+@echo Используется Отчеты %REPORT%>>extract_build.log
+@echo Используется СОФИТ %SOFIT%>>extract_build.log
+@echo Используется ТОМКАТ %tomcat%>>extract_build.log
+@echo Используется DelphiXE %DelphiXE%>>extract_build.log
+@echo.>>extract_build.log
+
 REM ========== 1.БЛОК С ПРОВЕРКАМИ (начало) ==========
 REM 1.1.ПРОВЕРКА ОСНОВНЫХ ДИРЕКТОРИЙ
 :check_dir
 set check_stop=0
 echo Результат проверки указанных значений:
-If Exist "%in%" ( echo + Директория "%in%" найдена.
-) else (echo - Директория "%in%" не найдена.
+echo [Директория %in%]
+If Exist "%in%" (call :color 2
+				 call :echo "- Директория с эталонкой найдена"
+) else (call :color 4
+		call :echo "- Директория с эталонкой не найдена"
 		set check_stop=1)
-If Exist "%EIS%" ( echo + Директория "%EIS%" найдена.
-) else (echo - Директория "%EIS%" не найдена.
+echo [Директория %EIS%]
+If Exist "%EIS%" (call :color 2
+				  call :echo "- Директория с ЕИС найдена"
+) else (call :color 4
+		call :echo "- Директория с ЕИС не найдена"
 		set check_stop=1)
-If Exist "%REPORT%" ( echo + Директория "%REPORT%" найдена.
-) else (echo - Директория "%REPORT%" не найдена.
+echo [Директория %REPORT%]
+If Exist "%REPORT%" (call :color 2
+				     call :echo "- Директория с отчетами найдена"
+) else (call :color 4
+		call :echo "- Директория с отчетами не найдена"
 		set check_stop=1)
-If Exist "%SOFIT%" ( echo + Директория "%SOFIT%" найдена.
-) else (echo - Директория "%SOFIT%" не найдена.
+echo [Директория %SOFIT%]
+If Exist "%SOFIT%" (call :color 2
+				    call :echo "- Директория с софитом найдена"
+) else (call :color 4
+		call :echo "- Директория с софитом не найдена"
 		set check_stop=1)
-If Exist "%tomcat%" ( echo + Директория "%tomcat%" найдена.
-) else (echo - Директория "%tomcat%" не найдена.
+echo [Директория %tomcat%]
+If Exist "%tomcat%" (call :color 2
+				     call :echo "- Директория с томкатом найдена"
+) else (call :color 4
+		call :echo "- Директория с томкатом не найдена"
 		set check_stop=1)
-If Exist "%DelphiXE%" ( echo + Директория "%DelphiXE%" найдена.
-) else (echo - Директория "%DelphiXE%" не найдена. 
+echo [Директория %DelphiXE%]
+If Exist "%DelphiXE%" (call :color 2
+				       call :echo "- Директория с DelphiXE найдена"
+) else (call :color 4
+		call :echo "- Директория с DelphiXE не найдена"
 		set check_stop=1)
+
 SetLocal ENABLEDELAYEDEXPANSION
 echo.
 REM ЕСЛИ ХОТЬ ОДИН ПУТЬ УКАЗАН НЕКОРРЕКТНО - ОСТАНАВЛИВАЕМ СБОРКУ. ВЫДАЕМ СООБЩЕНИЕ.
 If %check_stop%==0 (echo Все указанные директории найдены. Продолжаем сборку стенда %SYS% 
 	goto :check_out
 	) else (echo Некорретно указаны директории, необходимо проверить пути в ini-файле [подробности выше]. Сборка стенда %SYS% остановлена.
-pause
-goto :exit_bat)
+			set success=1
+			goto :exit_bat)
 
 REM 1.2.ПРОВЕРКА НАЛИЧИЯ ДИРЕКТОРИИ, В КОТОРОЙ БУДЕТ СОБИРАТЬСЯ СБОРКА
 :check_out
@@ -125,6 +173,7 @@ If %ask%==y (RD /S /Q %out%
 			goto :extract
 ) else (If %ask%==n (
 		echo Сборка стенда %SYS% остановлена.
+		set success=1
 		goto :exit_bat
 		) else (echo Команда не распознана. Попробуйте ещё раз.
 				echo.
@@ -140,6 +189,7 @@ If %ask%==y (
 			If %answer2%==ask_start (
 				goto :ask_start
 				) else (
+				set success=1
 				goto :exit_bat)
 		) else (
 		echo Команда не распознана. Попробуйте ещё раз.
@@ -153,7 +203,9 @@ REM 2.1 ОБЩИЙ ПОРЯДОК КОМАНД ПРИ РАСПАКОВКЕ АРХИВОВ (начало)
 echo %textblock%
 %winRar% x "%zipFile%" -o "%outputFile%" -r -y -ibck
 If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
+				   @echo %textblock% Успешно>>extract_build.log
 					goto :%nextPoint%) else (Echo "- - - Возникли проблемы при выполнении. - - -" 
+										@echo %textblock% Ошибка>>extract_build.log
 										 set answer=%nextPoint%
 										 goto :askexit)
 echo -----------------------------------------------------------------------
@@ -162,31 +214,35 @@ REM 2.2.ОБЩИЙ ПОРЯДОК КОМАНД ПРИ КОПИРОВАНИИ ФАЙЛОВ (начало)
 :copy_data
 echo %textblock%
 xcopy "%inputFolder%" "%outputFolder%" /i /e /h /y
-If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
+If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -" 
+				   @echo %textblock% Успешно>>extract_build.log
 					goto :%nextPoint%) else (Echo "- - - Возникли проблемы при выполнении. - - -" 
+										@echo %textblock% Ошибка>>extract_build.log
 										 set answer=%nextPoint%
 										 goto :askexit)
 echo -----------------------------------------------------------------------
 
 REM 2.3.ОБЩИЙ ПОРЯДОК КОМАНД ПРИ ЗАМЕНЕ ДАННЫХ (начало)
 :rename_data
-setlocal enabledelayedexpansion
+SetLocal EnableExtensions EnableDelayedExpansion
 REM Предварительно удаляем строки с пустыми значениями (фикс от записи текста "Режим вывода команд на экран (ECHO) отключен.")
 cd /d "%fileDirectory%"
-findstr /vrc:"^$" /vrc:"^ $" /vrc:"^  $" %FILENAME%>tmp0.tmp
+findstr /vrc:"^$" /vrc:"^ $" /vrc:"^  $" %fileName%>tmp0.tmp
 set "tempFile=tmp0.tmp"
 
 echo %textblock% %fileName%
-set COUNT=0
-for /F "tokens=* delims=," %%n in (!tempFile!) do (
-set LINE=%%n
-set TMPR=!LINE:%oldText%=%newText%!
-Echo !TMPR!>>tmp1.tmp
+<"%tempFile%" >"tmp1.tmp" (
+  for /f %%a in ('find /c /v "" ^< "%tempFile%"') do for /L %%C in (1,1,%%a) do (
+    set LINE=& set /p LINE=
+    if defined LINE (echo !LINE:%oldText%=%newText%!) else echo.
+  )
 )
+del %tempFile%
 move tmp1.tmp %fileName%
-REM del %tempFile%
 If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
-					goto :%nextPoint%) else (Echo "- - - Возникли проблемы при выполнении. - - -" 
+				   @echo %textblock% %fileName% Успешно>>extract_build.log
+					goto :%nextPoint%) else (Echo "- - - Возникли проблемы при выполнении. - - -"
+									   @echo %textblock% Ошибка>>extract_build.log
 										set answer=%nextPoint%
 										goto :askexit)
 echo -----------------------------------------------------------------------
@@ -198,6 +254,7 @@ REM 3.1.РАСПАКОВЫВАЕМ АРХИВ SERVER.ZIP
 If not exist "%winRar%" (
     echo ERROR: Архиватор WinRAR по пути "%winRar%" не найден. Проверьте путь, указанный в файле "%ini%"
 	pause
+	set success=1
 	goto :exit_bat
 )
 	set "textBlock=Распаковываем архив server.zip ..."
@@ -280,7 +337,7 @@ goto :copy_data
 
 :extract_port
 REM 3.9. ПЕРЕИМЕНОВЫВАЕМ ПОРТЫ
-	set "textBlock=Переименовываем порты в "
+	set "textBlock=Переименовываем порты в"
 	set "fileName=%infile_1%"
 	set "fileDirectory=%out%"
 	set "oldText=%SP_PORT%"
@@ -314,7 +371,7 @@ goto :rename_data
 
 :extract_db
 REM 3.10.МЕНЯЕМ ПУТЬ ДО БД FIREBIRD В AZK2SERVER.PROPERTIES
-	set "textBlock=Меняем путь до БД Firebird в "
+	set "textBlock=Меняем путь до БД Firebird в"
 	set "fileName=%infile_4%"
 	set "fileDirectory=%out%"
 	set "oldText=%fb_old%"
@@ -324,7 +381,7 @@ goto :rename_data
 
 :extract_db2
 REM 3.11.МЕНЯЕМ ПУТЬ ДО БД ORACLE В AZK2SERVER.PROPERTIES
-	set "textBlock=Меняем путь до БД Oracle в "
+	set "textBlock=Меняем путь до БД Oracle в"
 	set "fileName=%infile_4%"
 	set "fileDirectory=%out%"
 	set "oldText=%ora_old%"
@@ -357,6 +414,15 @@ REM 3.12.2.МЕНЯЕМ ACTION="PERFORM" НА ACTION="SYNCHRONIZE"
 	set "fileDirectory=%out%\XML"
 	set "oldText=perform"
 	set "newText=synchronize"
+	set "nextPoint=extract_xm4"
+goto :rename_data
+
+:extract_xm4
+REM 3.12.2.МЕНЯЕМ ACTION="PERFORM" НА ACTION="SYNCHRONIZE"
+	set "fileName=%reportprocessor%"
+	set "fileDirectory=%out%\XML"
+	set "oldText=perform"
+	set "newText=synchronize"
 	set "nextPoint=extract_Xmx"
 goto :rename_data
 
@@ -372,14 +438,20 @@ goto :rename_data
 
 :extract_tomcat
 REM 3.14.ДОБАВЛЯЕМ СБОРКУ ТОМКАТА, ПОДКЛАДЫВАЕМ AZK.WAR
-echo Копируем сборку TOMCAT
-xcopy "%tomcat%" "%out%"\apache_tomcat /i /e /h /y
-echo Копируем файл azk.war
-xcopy "%in%"\azk.war "%out%"\apache_tomcat\webapps /i /e /h /y
-If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -") else (Echo "- - - Возникли проблемы при выполнении. - - -" 
-																	set answer=extract_tomcat_port
-																	goto :askexit)
+	set "textBlock=Копируем сборку TOMCAT"
+	set "inputFolder=%tomcat%"
+	set "outputFolder=%out%\apache_tomcat"
+	set "nextPoint=extract_tomcat2"
+goto :copy_data
 
+:extract_tomcat2
+REM 3.14.ДОБАВЛЯЕМ СБОРКУ ТОМКАТА, ПОДКЛАДЫВАЕМ AZK.WAR
+	set "textBlock=Копируем файл azk.war"
+	set "inputFolder=%in%\azk.war"
+	set "outputFolder=%out%\apache_tomcat\webapps"
+	set "nextPoint=extract_tomcat_port"
+goto :copy_data
+									 
 :extract_tomcat_port
 REM 3.14.1.МЕНЯЕМ ПОРТ ВЕБ-СЕРВЕРА
 	set "textBlock=Переименовываем порты в "
@@ -404,6 +476,7 @@ REM 3.15.ЗАПУСКАЕМ ТОМКАТ ДЛЯ РАСПАКОВКИ azk.war
 echo -----------------------------------------------------------------------
 echo.
 echo ЗАПУСКАЕМ ТОМКАТ ДЛЯ РАСПАКОВКИ azk.war
+@echo ЗАПУСКАЕМ ТОМКАТ ДЛЯ РАСПАКОВКИ azk.war>>extract_build.log
 cd /d "%out%"\apache_tomcat\bin\
 REM Использую call, из-за того, что после выполнения с командой start, текущая работа bat-ника прекращается.
 call startup.bat
@@ -413,6 +486,7 @@ REM 3.16.МЕНЯЕМ RMI-ПОРТ В НАСТРОКАХ ТОМКАТА
 echo -----------------------------------------------------------------------
 echo.
 echo МЕНЯЕМ RMI-ПОРТ В НАСТРОКАХ ТОМКАТА
+@echo МЕНЯЕМ RMI-ПОРТ В НАСТРОКАХ ТОМКАТА>>extract_build.log
 	set question="Изменить порт в файле "%infile_5%?" [y/n]: "
 	set answer=web_rmi
 goto :askexit
@@ -450,7 +524,10 @@ call shutdown.bat
 TIMEOUT /T 5 /NOBREAK
 cd /d "%out%"\apache_tomcat\webapps
 DEL /Q azk.war
-If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -") else (Echo "- - - Возникли проблемы при выполнении. - - -" )
+If %errorlevel%==0 (Echo "- - - Операция успешно завершена. - - -"
+					@echo Файл azk.war удален...Успешно>>extract_build.log
+					) else (Echo "- - - Возникли проблемы при выполнении. - - -"
+							@echo Файл azk.war удален...Ошибка>>extract_build.log)
 goto :ask_start
 
 REM 3.18.Проверка на запуск СП АЦК-Финансы
@@ -467,10 +544,23 @@ REM Запуск СП АЦК
 cd /d "%out%"
 call StartServer.bat
 
+:color
+set c=%1& exit/b
+ 
+:echo
+for /f %%i in ('"prompt $h& for %%i in (.) do rem"') do (
+  pushd "%~dp0"& <nul>"%~1_" set/p="%%i%%i  "& findstr/a:%c% . "%~1_*"
+  (if "%~2" neq "/" echo.)& del "%~1_"& popd& set c=& exit/b
+)
+
 REM Делаем остановку перед выходом. После чего выходим из программы
-:exit_bat	 
+:exit_bat
 pause
 
-exit
+@echo.>>extract_build.log
+@echo В случае проблем и вопросов обращаться albafoxx (abzaev.albert@gmail.com)>>extract_build.log
+if %success%==0 (echo Сборка выполнена успешно. Пользуйтесь на здоровье>>extract_build.log
+	) else (echo Сборка выполнена с ошибками...>>extract_build.log)
 
+exit
 END
