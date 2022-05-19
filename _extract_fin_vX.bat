@@ -586,10 +586,10 @@ goto :askexit
 REM ‡ ―γαª ‘ €–
 :startbat
 cd /d "%out%"
+start StartServer.bat
 echo ----------------------------------------------------------------------->>%logfile%
 @echo %DATE% %time:~0,8% : ‘΅®ΰª  Άλ―®«­¥­  “‘…. ‚λ―®«­¥­ § ―γαª ‘ %SYS%>>%logfile%
 call :copyright
-call StartServer.bat
 
 REM „…‹€… ‘’€‚“ ……„ ‚›•„. ‘‹… —…ƒ ‚›•„ ‡ ƒ€›
 :exit_bat
